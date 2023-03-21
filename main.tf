@@ -6,27 +6,31 @@ terraform {
     }
   }
 }
-provider "github" {
-  token = "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"
-  owner = "lswaes"
+
+# Add new users to org
+resource "github_membership" "all" {
+  for_each = {
+    for member in csvdecode(file("members.csv")) :
+    member.username => member
+  }
+  username = each.value.username
 }
 
-// create new team
-resource "github_team" "sre" {
-  name        = "SRE"
-  description = "Site Reliability Engineering"
-  privacy     = "closed"
+# Add new teams to the org
+
+resource "github_team" "all" {
+  for_each = {
+    for team in csvdecode(file("teams.csv")) :
+    team.name => team
+  }
+  name = each.value.name
 }
 
-// create and add member to team
-resource "github_team_membership" "sre_team_membership" {
-  team_id  = github_team.sre.id
-  username = "<username>"
-  role     = "member"
-}
+# Add team membership
 
-data "github_team_repository" "sre_team_repo" {
-  team_id    = github_team.sre.id
-  repository = github_repository.sre_scripts.name
-  permission = "push"
+resource "github_team_membership" "members" {
+for_each = { for tm in local.team_members : tm.name => tm }
+team_id  = each.value.team_id
+username = each.value.username
+role     = each.value.role
 }
